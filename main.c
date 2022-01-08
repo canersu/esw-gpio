@@ -1,11 +1,26 @@
 /**
- * Basic Blink app for Silabs Wireless Gecko platforms.
+ * @brief Example usage of GPIO peripheral. Three LEDs are toggled using 
+ * GPIO functionality. A hardware-to-software interrupt is set up and 
+ * triggered by a button switch.
  *
- * Configure platform, logging to UART, start kernel and keep blinking LEDs.
+ * The tsb0 board has three LEDs (red, green, blue) connected to ports
+ * PB11, PB12, PA5 respectively. The button switch is connected to port
+ * PF4. LED and button locations (pin and port numbers) can be found from 
+ * the tsb0 board wiring schematics.
  *
+ * EFR32MG12 Wireless Gecko Reference Manual (GPIO p1105)
+ * https://www.silabs.com/documents/public/reference-manuals/efr32xg12-rm.pdf
+ *
+ * GPIO API documentation 
+ * https://docs.silabs.com/mcu/latest/efr32mg12/group-GPIO
+ * 
+ * ARM RTOS API
+ * https://arm-software.github.io/CMSIS_5/RTOS2/html/group__CMSIS__RTOS.html
+ * 
  * Copyright Thinnect Inc. 2019
  * Copyright ProLab TTÜ 2022
  * @license MIT
+ * @author Johannes Ehala
  */
 #include <stdio.h>
 #include <stdint.h>
@@ -22,6 +37,9 @@
 #include "loggers_ext.h"
 #include "logger_fwrite.h"
 
+#include "em_cmu.h"
+#include "em_gpio.h"
+
 #include "loglevels.h"
 #define __MODUUL__ "main"
 #define __LOG_LEVEL__ (LOG_LEVEL_main & BASE_LOG_LEVEL)
@@ -31,21 +49,82 @@
 #include "incbin.h"
 INCBIN(Header, "header.bin");
 
+#define ESWGPIO_LED0_PORT gpioPortB
+#define ESWGPIO_LED1_PORT gpioPortB
+#define ESWGPIO_LED2_PORT gpioPortA
+
+#define ESWGPIO_LED0_PIN 11     // Red
+#define ESWGPIO_LED1_PIN 12     // Green
+#define ESWGPIO_LED2_PIN 5      // Blue
+
+#define ESWGPIO_LED0_DELAY 333   // OS ticks
+#define ESWGPIO_LED1_DELAY 1000  // OS ticks
+#define ESWGPIO_LED2_DELAY 1500  // OS ticks
+
+static void led0_loop (void *args);
+static void led1_loop (void *args);
+static void led2_loop (void *args);
+
 // Heartbeat thread, initialize GPIO and print heartbeat messages.
 void hp_loop ()
 {
-    #define ESW_GPIO_HB_DELAY 10 // Heartbeat message delay, seconds
+    #define ESWGPIO_HB_DELAY 10 // Heartbeat message delay, seconds
     
-    // TODO Initialize GPIO.
+    // Initialize GPIO peripheral.
+    CMU_ClockEnable(cmuClock_GPIO, true);
+    
+    // Configure LED pins as push-pull output pins.
+    GPIO_PinModeSet(ESWGPIO_LED0_PORT, ESWGPIO_LED0_PIN, gpioModePushPull, 0);
+    GPIO_PinModeSet(ESWGPIO_LED1_PORT, ESWGPIO_LED1_PIN, gpioModePushPull, 0);
+    GPIO_PinModeSet(ESWGPIO_LED2_PORT, ESWGPIO_LED2_PIN, gpioModePushPull, 0);
+    
+    // Create threads to toggle each LED.
+    const osThreadAttr_t led0_thread_attr = { .name = "led0" };
+    osThreadNew(led0_loop, NULL, &led0_thread_attr);
+    const osThreadAttr_t led1_thread_attr = { .name = "led1" };
+    osThreadNew(led1_loop, NULL, &led1_thread_attr);
+    const osThreadAttr_t led2_thread_attr = { .name = "led2" };
+    osThreadNew(led2_loop, NULL, &led2_thread_attr);
     
     for (;;)
     {
-        osDelay(ESW_GPIO_HB_DELAY*osKernelGetTickFreq());
+        osDelay(ESWGPIO_HB_DELAY*osKernelGetTickFreq());
         info1("Heartbeat");
     }
 }
 
-// TODO LED toggle thread.
+// LED toggle threads.
+static void led0_loop (void *args)
+{
+    uint32_t led_cnt = 0;
+    for (;;)
+    {
+        osDelay(ESWGPIO_LED0_DELAY);
+        
+        if(led_cnt%2)GPIO_PinOutClear(ESWGPIO_LED0_PORT, ESWGPIO_LED0_PIN);
+        else GPIO_PinOutSet(ESWGPIO_LED0_PORT, ESWGPIO_LED0_PIN);
+        
+        led_cnt++;
+    }
+}
+
+static void led1_loop (void *args)
+{
+    for (;;)
+    {
+        osDelay(ESWGPIO_LED1_DELAY);
+        GPIO_PinOutToggle(ESWGPIO_LED1_PORT, ESWGPIO_LED1_PIN);
+    }
+}
+
+static void led2_loop (void *args)
+{
+    for (;;)
+    {
+        osDelay(ESWGPIO_LED2_DELAY);
+        GPIO_PinOutToggle(ESWGPIO_LED2_PORT, ESWGPIO_LED2_PIN);
+    }
+}
 
 // TODO Button interrupt thread.
 
@@ -70,7 +149,7 @@ int main ()
     osKernelInitialize();
 
     // Create a thread.
-    const osThreadAttr_t hp_thread_attr = { .name = "app" };
+    const osThreadAttr_t hp_thread_attr = { .name = "hb" };
     osThreadNew(hp_loop, NULL, &hp_thread_attr);
 
     if (osKernelReady == osKernelGetState())
