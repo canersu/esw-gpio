@@ -54,8 +54,8 @@ INCBIN(Header, "header.bin");
 #define ESWGPIO_LED2_PORT       gpioPortA
 #define ESWGPIO_BUTTON_PORT     gpioPortF
 
-#define ESWGPIO_LED0_PIN        11     // Red
-#define ESWGPIO_LED1_PIN        12     // Green
+#define ESWGPIO_LED0_PIN        12     // Red
+#define ESWGPIO_LED1_PIN        11     // Green
 #define ESWGPIO_LED2_PIN        5      // Blue
 #define ESWGPIO_BUTTON_PIN      4
 
@@ -144,8 +144,8 @@ static void led2_loop (void *args)
     for (;;)
     {
         osDelay(ESWGPIO_LED2_DELAY);
-        if(GPIO_PinOutGet(ESWGPIO_LED2_PORT, ESWGPIO_LED2_PIN))GPIO_PinOutSet(ESWGPIO_LED2_PORT, ESWGPIO_LED2_PIN);
-        else GPIO_PinOutClear(ESWGPIO_LED2_PORT, ESWGPIO_LED2_PIN);
+        if(GPIO_PinOutGet(ESWGPIO_LED2_PORT, ESWGPIO_LED2_PIN)) GPIO_PinOutClear(ESWGPIO_LED2_PORT, ESWGPIO_LED2_PIN);
+        else GPIO_PinOutSet(ESWGPIO_LED2_PORT, ESWGPIO_LED2_PIN);
     }
 }
 
