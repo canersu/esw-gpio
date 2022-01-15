@@ -8,6 +8,9 @@
  * PF4. LED and button locations (pin and port numbers) can be found from 
  * the tsb0 board wiring schematics.
  *
+ * EFR32 Application Note on GPIO
+ * https://www.silabs.com/documents/public/application-notes/an0012-efm32-gpio.pdf
+ *
  * EFR32MG12 Wireless Gecko Reference Manual (GPIO p1105)
  * https://www.silabs.com/documents/public/reference-manuals/efr32xg12-rm.pdf
  *
