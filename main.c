@@ -40,6 +40,10 @@
 #include "loggers_ext.h"
 #include "logger_fwrite.h"
 
+#include "em_gpio.h"
+#include "em_cmu.h"
+
+
 #include "loglevels.h"
 #define __MODUUL__ "main"
 #define __LOG_LEVEL__ (LOG_LEVEL_main & BASE_LOG_LEVEL)
@@ -49,12 +53,20 @@
 #include "incbin.h"
 INCBIN(Header, "header.bin");
 
+void led_one();
+
 // Heartbeat thread, initialize GPIO and print heartbeat messages.
 void hp_loop ()
 {
     #define ESWGPIO_HB_DELAY 10 // Heartbeat message delay, seconds
     
     // TODO Initialize GPIO.
+    CMU_ClockEnable(cmuClock_GPIO, true);
+    GPIO_PinModeSet(gpioPortB, 12, gpioModePushPull, 0);
+
+// TODO LED toggle thread.
+    const osThreadAttr_t LED1_thread_attr = { .name = "LED1" };
+    osThreadNew(led_one, NULL, &LED1_thread_attr);
     
     for (;;)
     {
@@ -63,7 +75,15 @@ void hp_loop ()
     }
 }
 
-// TODO LED toggle thread.
+
+void led_one()
+{
+    for(;;)
+    {
+        osDelay(300);
+        GPIO_PinOutToggle(gpioPortB, 12);
+    }
+}
 
 // TODO Button interrupt thread.
 
