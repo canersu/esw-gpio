@@ -54,6 +54,7 @@
 INCBIN(Header, "header.bin");
 
 void led_one();
+void buzzer_tone();
 
 // Heartbeat thread, initialize GPIO and print heartbeat messages.
 void hp_loop ()
@@ -63,6 +64,7 @@ void hp_loop ()
     // TODO Initialize GPIO.
     CMU_ClockEnable(cmuClock_GPIO, true);
     GPIO_PinModeSet(gpioPortB, 12, gpioModePushPull, 0);
+
 
 // TODO LED toggle thread.
     const osThreadAttr_t LED1_thread_attr = { .name = "LED1" };
@@ -85,7 +87,62 @@ void led_one()
     }
 }
 
+void ambulance_sound()
+{
+    for(int i=0; i<100; i++)
+    {
+        osDelay(2);
+        GPIO_PinOutToggle(gpioPortA, 0);
+    }
+
+    osDelay(50);
+    for(int i=0; i<50; i++)
+    {
+        osDelay(4);
+        GPIO_PinOutToggle(gpioPortA, 0);
+    }
+    osDelay(50);
+}
+
+
+void buzzer_tone()
+{
+    for(;;)
+    {
+
+        if (GPIO_PinInGet(gpioPortF, 4) == 0)
+        {
+            // GPIO_PinOutToggle(gpioPortB, 11);
+            // osDelay(200);
+            ambulance_sound();
+        }
+    }
+}
+
 // TODO Button interrupt thread.
+
+void buzzer_loop ()
+{
+    #define ESWGPIO_HB_DELAY 10 // Heartbeat message delay, seconds
+    
+    // TODO Initialize GPIO.
+    CMU_ClockEnable(cmuClock_GPIO, true);
+    // Buzzer
+    GPIO_PinModeSet(gpioPortA, 0, gpioModePushPull, 0);
+    // LED 1
+    GPIO_PinModeSet(gpioPortB, 11, gpioModePushPull, 0);
+    // Button
+    GPIO_PinModeSet(gpioPortF, 4, gpioModeInputPull , 1);
+
+
+// TODO Buzzer thread.
+    const osThreadAttr_t BUZZER_thread_attr = { .name = "BUZZER" };
+    osThreadNew(buzzer_tone, NULL, &BUZZER_thread_attr);
+    
+    for (;;)
+    {
+    }
+}
 
 int logger_fwrite_boot (const char *ptr, int len)
 {
@@ -110,6 +167,10 @@ int main ()
     // Create a thread.
     const osThreadAttr_t hp_thread_attr = { .name = "hp" };
     osThreadNew(hp_loop, NULL, &hp_thread_attr);
+
+    // Create a thread.
+    const osThreadAttr_t buzzer_thread_attr = { .name = "buzzer_tone" };
+    osThreadNew(buzzer_loop, NULL, &buzzer_thread_attr);
 
     if (osKernelReady == osKernelGetState())
     {
