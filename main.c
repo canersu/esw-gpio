@@ -61,12 +61,12 @@ void hp_loop ()
 {
     #define ESWGPIO_HB_DELAY 10 // Heartbeat message delay, seconds
     
-    // TODO Initialize GPIO.
+    // Initialize GPIO.
     CMU_ClockEnable(cmuClock_GPIO, true);
     GPIO_PinModeSet(gpioPortB, 12, gpioModePushPull, 0);
 
 
-// TODO LED toggle thread.
+// LED toggle thread.
     const osThreadAttr_t LED1_thread_attr = { .name = "LED1" };
     osThreadNew(led_one, NULL, &LED1_thread_attr);
     
@@ -78,64 +78,73 @@ void hp_loop ()
 }
 
 
+// This function enables LED toggles with 500ms intervals
 void led_one()
 {
     for(;;)
     {
-        osDelay(300);
+        osDelay(500);
         GPIO_PinOutToggle(gpioPortB, 12);
     }
 }
 
-void ambulance_sound()
+
+// Makes 2 different tones of sound from buzzer
+// duration of each tone is 200ms with 50ms breaks
+void siren_sound()
 {
+    // Lets the buzzer play in 1000ms/2=500Hz
+    // Durarion of that tone is 100*2ms=200ms
     for(int i=0; i<100; i++)
     {
         osDelay(2);
         GPIO_PinOutToggle(gpioPortA, 0);
     }
-
+    // Wait a little between 2 tones
+    // GPIO_PinOutToggle(gpioPortB, 11);
     osDelay(50);
+
+    // Lets the buzzer play in 1000ms/4=250Hz
+    // Durarion of that tone is 50*4ms=200ms
     for(int i=0; i<50; i++)
     {
         osDelay(4);
         GPIO_PinOutToggle(gpioPortA, 0);
     }
+    // Wait a little between 2 tones
+    // GPIO_PinOutToggle(gpioPortB, 11);
     osDelay(50);
 }
 
 
+// This function is responsible for waiting for button
+// to be pushed and call the siren_sound() function
 void buzzer_tone()
 {
     for(;;)
     {
-
         if (GPIO_PinInGet(gpioPortF, 4) == 0)
         {
-            // GPIO_PinOutToggle(gpioPortB, 11);
-            // osDelay(200);
-            ambulance_sound();
+            siren_sound();
         }
     }
 }
 
-// TODO Button interrupt thread.
+// Button-Buzzer interrupt thread.
 
 void buzzer_loop ()
 {
-    #define ESWGPIO_HB_DELAY 10 // Heartbeat message delay, seconds
-    
-    // TODO Initialize GPIO.
+    // Initialize GPIO.
     CMU_ClockEnable(cmuClock_GPIO, true);
-    // Buzzer
+    // Set Buzzer Pin as Output (GPIO A0)
     GPIO_PinModeSet(gpioPortA, 0, gpioModePushPull, 0);
-    // LED 1
+    // Set LED 1 Pin as Output (GPIO B11) (USED FOR TEST PURPOSE)
     GPIO_PinModeSet(gpioPortB, 11, gpioModePushPull, 0);
-    // Button
+    // Set Button Pin as Input (GPIO F4, InputPull mode)
     GPIO_PinModeSet(gpioPortF, 4, gpioModeInputPull , 1);
 
 
-// TODO Buzzer thread.
+// Button-buzzer thread calls buzzer_tone method.
     const osThreadAttr_t BUZZER_thread_attr = { .name = "BUZZER" };
     osThreadNew(buzzer_tone, NULL, &BUZZER_thread_attr);
     
@@ -164,11 +173,11 @@ int main ()
     // Initialize OS kernel.
     osKernelInitialize();
 
-    // Create a thread.
+    // Create a thread for heartbeat
     const osThreadAttr_t hp_thread_attr = { .name = "hp" };
     osThreadNew(hp_loop, NULL, &hp_thread_attr);
 
-    // Create a thread.
+    // Create a thread for button-buzzer
     const osThreadAttr_t buzzer_thread_attr = { .name = "buzzer_tone" };
     osThreadNew(buzzer_loop, NULL, &buzzer_thread_attr);
 
